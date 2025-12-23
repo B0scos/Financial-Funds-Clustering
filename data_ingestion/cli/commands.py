@@ -8,6 +8,9 @@ from pathlib import Path
 
 from core.pipeline import CVMPipeline
 
+from config import settings
+import shutil
+
 def create_parser() -> argparse.ArgumentParser:
     """Create CLI argument parser."""
     parser = argparse.ArgumentParser(
@@ -147,8 +150,7 @@ def handle_status(args):
 
 def handle_clean(args):
     """Handle clean command."""
-    from config import settings
-    import shutil
+
     
     if args.data_dir:
         settings.DATA_DIR = Path(args.data_dir)
