@@ -77,8 +77,22 @@ class ProcessRaw:
             # Use helper to log and raise a CustomException
             raise_from_exception("Failed to concatenate raw CSV files", e)
 
-    def save(self, df: pd.DataFrame, filename: str = "processed.parquet", fmt: str = "parquet", sample_csv_lines: int = 10, sep: str = ";") -> Path:
+    def save(
+        self,
+        df: pd.DataFrame,
+        filename: str = "processed.parquet",
+        fmt: str = "parquet",
+        sample_csv_lines: int = 10,
+        sep: str = ";",
+        allow_full_csv: bool = False,
+    ) -> Path:
         """Save dataframe in the chosen format and also write a small CSV sample.
+
+        CSV Safety Policy
+        ------------------
+        For safety, the method will **never** write a full CSV file by default when
+        the DataFrame is large. To force writing a full CSV, pass
+        `allow_full_csv=True` (not recommended). Instead, prefer Parquet output.
 
         Parameters
         ----------
@@ -94,6 +108,9 @@ class ProcessRaw:
             VSCode.
         sep : str
             Delimiter used when writing CSV sample.
+        allow_full_csv : bool
+            If `True`, allow writing the full CSV even when the dataframe is
+            large. Default is `False`.
 
         Returns
         -------
@@ -102,6 +119,7 @@ class ProcessRaw:
         """
         try:
             out_path = self.path_processed_path / filename
+            nrows = len(df)
 
             if fmt == "parquet":
                 # Try pyarrow then fastparquet
@@ -115,19 +133,27 @@ class ProcessRaw:
                         logger.info("Saved processed dataframe as parquet to %s (fastparquet)", out_path)
                     except Exception as e2:
                         raise_from_exception("Failed to write parquet file; please install pyarrow or fastparquet", e2)
+
             elif fmt == "csv":
+                # Safety: don't write big CSVs unless explicitly allowed
+                if nrows > sample_csv_lines and not allow_full_csv:
+                    raise CustomException(
+                        f"Refusing to write full CSV ({nrows} rows)."
+                        " To allow this, set `allow_full_csv=True` (not recommended)."
+                    )
                 df.to_csv(out_path, index=False, sep=sep, encoding="utf-8")
                 logger.info("Saved processed dataframe as csv to %s", out_path)
             else:
                 raise CustomException(f"Unsupported save format: {fmt}")
 
-            # Also write a small CSV sample for quick checking in VSCode
+            # Always write a small CSV sample for quick checking in VSCode
             sample_path = self.path_processed_path / f"{out_path.stem}_sample.csv"
             df.head(sample_csv_lines).to_csv(sample_path, index=False, sep=sep, encoding="utf-8")
             logger.info("Saved sample CSV (%d rows) to %s", sample_csv_lines, sample_path)
 
             return out_path
         except CustomException:
+            # Re-raise configuration/usage errors without wrapping
             raise
         except Exception as e:
             raise_from_exception(f"Failed to save processed dataframe to {filename}", e)
