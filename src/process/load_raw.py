@@ -77,16 +77,58 @@ class ProcessRaw:
             # Use helper to log and raise a CustomException
             raise_from_exception("Failed to concatenate raw CSV files", e)
 
-    def save(self, df: pd.DataFrame, filename: str = "processed.csv", sep: str = ";") -> Path:
-        """Save dataframe to `path_processed_path/filename`.
+    def save(self, df: pd.DataFrame, filename: str = "processed.parquet", fmt: str = "parquet", sample_csv_lines: int = 10, sep: str = ";") -> Path:
+        """Save dataframe in the chosen format and also write a small CSV sample.
 
-        Returns the path to the written file.
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Dataframe to save.
+        filename : str
+            File name for the main output. For `parquet` this should end with
+            `.parquet`; for `csv` with `.csv`.
+        fmt : str
+            Output format: `'parquet'` or `'csv'`.
+        sample_csv_lines : int
+            Number of rows to write to a sample CSV file for quick inspection in
+            VSCode.
+        sep : str
+            Delimiter used when writing CSV sample.
+
+        Returns
+        -------
+        Path
+            Path to the main output file.
         """
         try:
             out_path = self.path_processed_path / filename
-            df.to_csv(out_path, index=False, sep=sep, encoding="utf-8")
-            logger.info("Saved processed dataframe to %s", out_path)
+
+            if fmt == "parquet":
+                # Try pyarrow then fastparquet
+                try:
+                    df.to_parquet(out_path, index=False, compression="snappy")
+                    logger.info("Saved processed dataframe as parquet to %s (pyarrow)", out_path)
+                except Exception as e1:
+                    # Try fastparquet
+                    try:
+                        df.to_parquet(out_path, index=False, engine="fastparquet", compression="snappy")
+                        logger.info("Saved processed dataframe as parquet to %s (fastparquet)", out_path)
+                    except Exception as e2:
+                        raise_from_exception("Failed to write parquet file; please install pyarrow or fastparquet", e2)
+            elif fmt == "csv":
+                df.to_csv(out_path, index=False, sep=sep, encoding="utf-8")
+                logger.info("Saved processed dataframe as csv to %s", out_path)
+            else:
+                raise CustomException(f"Unsupported save format: {fmt}")
+
+            # Also write a small CSV sample for quick checking in VSCode
+            sample_path = self.path_processed_path / f"{out_path.stem}_sample.csv"
+            df.head(sample_csv_lines).to_csv(sample_path, index=False, sep=sep, encoding="utf-8")
+            logger.info("Saved sample CSV (%d rows) to %s", sample_csv_lines, sample_path)
+
             return out_path
+        except CustomException:
+            raise
         except Exception as e:
             raise_from_exception(f"Failed to save processed dataframe to {filename}", e)
 
