@@ -12,6 +12,7 @@ from src.utils.custom_exception import raise_from_exception, CustomException
 from src.utils.custom_logger import get_logger
 
 from src.config.settings import DATA_INTERIM_PATH
+from src.process.validate_data import validate_and_manifest
 
 logger = get_logger(__name__)
 
@@ -130,6 +131,19 @@ class ProcessRaw:
                     logger.debug("Casting column %s to datetime", date_col)
                     df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
                     logger.info("Column %s cast to datetime; nulls after cast: %d", date_col, df[date_col].isna().sum())
+
+            # Generate validation manifest and save metadata to interim
+            try:
+                manifest_path, manifest = validate_and_manifest(
+                    df,
+                    name="concat",
+                    out_dir=self.path_interim_path,
+                    required_columns=["fund_cnpj", "report_date"],
+                    sample_n=5,
+                )
+                logger.info("Manifest written to %s", manifest_path)
+            except Exception as e:
+                logger.warning("Failed to write manifest: %s", e)
 
             return df
 
