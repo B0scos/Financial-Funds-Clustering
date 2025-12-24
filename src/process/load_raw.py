@@ -12,7 +12,7 @@ from src.utils.custom_exception import raise_from_exception, CustomException
 from src.utils.custom_logger import get_logger
 
 from src.config.settings import DATA_INTERIM_PATH
-from src.process.validate_data import validate_and_manifest
+from src.process.validate_data import validate_required_columns, generate_source_report
 
 logger = get_logger(__name__)
 
@@ -74,6 +74,9 @@ class ProcessRaw:
                         logger.debug("utf-8 failed for %s; trying latin-1", rel_path)
                         df_read = pd.read_csv(file_path, sep=sep, encoding="latin-1")
 
+                    # Track provenance so we can report which files contribute bad rows
+                    df_read["source_file"] = rel_path
+
                     logger.info("Loaded %s rows from %s", len(df_read), rel_path)
                     df_list.append(df_read)
 
@@ -132,18 +135,24 @@ class ProcessRaw:
                     df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
                     logger.info("Column %s cast to datetime; nulls after cast: %d", date_col, df[date_col].isna().sum())
 
-            # Generate validation manifest and save metadata to interim
+            # Validate required schema columns (manifest functionality removed)
             try:
-                manifest_path, manifest = validate_and_manifest(
-                    df,
-                    name="concat",
-                    out_dir=self.path_interim_path,
-                    required_columns=["fund_cnpj", "report_date"],
-                    sample_n=5,
-                )
-                logger.info("Manifest written to %s", manifest_path)
+                validate_required_columns(df, ["fund_cnpj", "report_date"])
+                logger.info("Validation passed for required columns")
+            except CustomException as e:
+                logger.warning("Schema validation issue: %s", e)
+
+            # Generate per-source report of missing/invalid rows
+            try:
+                report_df = generate_source_report(df, out_dir=self.path_interim_path, required_columns=["fund_cnpj", "report_date"], name="concat", write_csv=True)
+                report_path = self.path_interim_path / "concat_source_report.csv"
+                logger.info("Source report saved to %s", report_path)
+                # Log top offending files
+                top = report_df.sort_values("rows_with_any_missing_required", ascending=False).head(5)
+                for _, row in top.iterrows():
+                    logger.info("Source %s: %d missing rows (%.2f%%)", row["source_file"], int(row["rows_with_any_missing_required"]), float(row["missing_fraction_pct"]))
             except Exception as e:
-                logger.warning("Failed to write manifest: %s", e)
+                logger.warning("Failed to generate source report: %s", e)
 
             return df
 

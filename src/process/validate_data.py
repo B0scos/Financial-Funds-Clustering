@@ -1,101 +1,75 @@
-"""Data validation and manifest generation utilities.
+"""Data validation utilities.
 
-Includes `generate_manifest` which computes basic metadata (rows, columns,
-null counts, dtypes) and writes a JSON manifest to the provided directory.
-Also includes simple schema validation helpers that raise `CustomException`
-on fatal issues.
+Provides simple schema validation helpers that raise `CustomException` on
+fatal issues. Manifest generation and file-writing have been removed from
+this module; validation now focuses on in-memory checks only.
 """
 from __future__ import annotations
 
-import json
-from datetime import datetime
-from pathlib import Path
-from typing import Optional, Tuple
+from typing import List
 
 import pandas as pd
 
 from src.utils.custom_logger import get_logger
-from src.utils.custom_exception import raise_from_exception, CustomException
+from src.utils.custom_exception import CustomException
+from pathlib import Path
+from typing import List
 
 logger = get_logger(__name__)
 
 
-def generate_manifest(
-    df: pd.DataFrame,
-    name: str,
-    out_dir: Path,
-    sample_n: int = 5,
-    required_columns: Optional[list] = None,
-    high_null_threshold: float = 0.5,
-) -> Tuple[Path, dict]:
-    """Generate a manifest JSON describing `df` and write it to `out_dir`.
-
-    Returns (manifest_path, manifest_dict).
-    """
-    try:
-        out_dir.mkdir(parents=True, exist_ok=True)
-
-        manifest = {
-            "name": name,
-            "created_at": datetime.utcnow().isoformat() + "Z",
-            "rows": int(len(df)),
-            "columns": int(len(df.columns)),
-            "column_names": list(map(str, list(df.columns))),
-            "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()},
-            "null_counts": {col: int(df[col].isna().sum()) for col in df.columns},
-            "null_fractions": {col: float(df[col].isna().sum() / max(1, len(df))) for col in df.columns},
-            "sample_rows": df.head(sample_n).to_dict(orient="records"),
-            "issues": [],
-        }
-
-        # Required columns check
-        if required_columns:
-            missing = [c for c in required_columns if c not in df.columns]
-            if missing:
-                manifest["issues"].append({"type": "missing_columns", "missing": missing})
-
-        # High-null columns
-        high_nulls = [c for c, frac in manifest["null_fractions"].items() if frac >= high_null_threshold]
-        if high_nulls:
-            manifest["issues"].append({"type": "high_null_fraction", "columns": high_nulls})
-
-        manifest_path = out_dir / f"{name}.manifest.json"
-
-        # If there are invalid dates, save a small sample for inspection
-        if "report_date" in df.columns:
-            invalid_count = int(df["report_date"].isna().sum())
-            if invalid_count > 0:
-                sample_invalid = df[df["report_date"].isna()].head(100)
-                invalid_path = out_dir / f"{name}_invalid_dates_sample.csv"
-                sample_invalid.to_csv(invalid_path, index=False)
-                manifest["issues"].append({"type": "invalid_dates_sample", "count": invalid_count, "path": str(invalid_path.name)})
-
-        with open(manifest_path, "w", encoding="utf-8") as fh:
-            json.dump(manifest, fh, ensure_ascii=False, indent=2, default=str)
-
-        logger.info("Wrote manifest for %s to %s", name, manifest_path)
-        return manifest_path, manifest
-
-    except Exception as e:
-        raise_from_exception("Failed to generate manifest", e)
-
-
-def validate_required_columns(df: pd.DataFrame, required_columns: list) -> None:
+def validate_required_columns(df: pd.DataFrame, required_columns: List[str]) -> None:
     """Raise CustomException if any required column is missing."""
     missing = [c for c in required_columns if c not in df.columns]
     if missing:
+        logger.error("Missing required columns: %s", missing)
         raise CustomException(f"Missing required columns: {missing}")
 
+    logger.debug("Required columns present: %s", required_columns)
 
-# Small helper that combines validation and manifest creation
-def validate_and_manifest(
-    df: pd.DataFrame,
-    name: str,
-    out_dir: Path,
-    required_columns: Optional[list] = None,
-    sample_n: int = 5,
-    high_null_threshold: float = 0.5,
-) -> Tuple[Path, dict]:
-    if required_columns:
-        validate_required_columns(df, required_columns)
-    return generate_manifest(df, name=name, out_dir=out_dir, sample_n=sample_n, required_columns=required_columns, high_null_threshold=high_null_threshold)
+
+
+
+
+def generate_source_report(df: pd.DataFrame, out_dir: Path, required_columns: List[str], name: str = "data", write_csv: bool = True) -> pd.DataFrame:
+    """Create a per-source report showing missing/invalid counts.
+
+    The report includes:
+      - source_file
+      - total_rows
+      - missing_<column> counts for each required column
+      - fully_empty_rows (all required columns missing)
+      - rows_with_any_missing_required
+      - missing_fraction_pct
+
+    Returns a pandas DataFrame with one row per source_file and optionally
+    writes a CSV to `out_dir/<name>_source_report.csv`.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if "source_file" not in df.columns:
+        raise CustomException("DataFrame missing 'source_file' column; enable provenance tracking in ProcessRaw.")
+
+    grouped = df.groupby("source_file")
+    records = []
+    for src, group in grouped:
+        total = len(group)
+        missing_counts = {f"missing_{c}": int(group[c].isna().sum()) for c in required_columns}
+        fully_empty = int(group[required_columns].isna().all(axis=1).sum())
+        any_missing = int(group[required_columns].isna().any(axis=1).sum())
+        records.append({
+            "source_file": src,
+            "total_rows": total,
+            **missing_counts,
+            "fully_empty_rows": fully_empty,
+            "rows_with_any_missing_required": any_missing,
+            "missing_fraction_pct": (any_missing / total * 100.0) if total else 0.0,
+        })
+
+    report_df = pd.DataFrame.from_records(records)
+    if write_csv:
+        report_path = out_dir / f"{name}_source_report.csv"
+        report_df.to_csv(report_path, index=False)
+        logger.info("Wrote source report for %s to %s", name, report_path)
+
+    return report_df
