@@ -117,6 +117,20 @@ class ProcessRaw:
                 return df
 
             df = _drop_and_rename(df)
+
+            # Remove any mis-parsed combined-header columns (they contain commas)
+            comma_cols = [c for c in df.columns if "," in c]
+            if comma_cols:
+                logger.warning("Found mis-parsed combined columns, dropping: %s", comma_cols)
+                df = df.drop(columns=comma_cols)
+
+            # Cast report_date (and common variants) to datetime
+            for date_col in ("report_date", "dt_comptc", "data_competencia"):
+                if date_col in df.columns:
+                    logger.debug("Casting column %s to datetime", date_col)
+                    df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
+                    logger.info("Column %s cast to datetime; nulls after cast: %d", date_col, df[date_col].isna().sum())
+
             return df
 
         except Exception as e:
@@ -221,12 +235,3 @@ class ProcessRaw:
             raise
         except Exception as e:
             raise_from_exception(f"Failed to save processed dataframe to {filename}", e)
-
-
-if __name__ == "__main__":
-    pr = ProcessRaw()
-    df = pr.concat()
-    pr.save(df)
-    logger.info("Processing complete. Output written to %s", pr.path_processed_path)
-
-
