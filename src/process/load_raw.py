@@ -7,7 +7,7 @@ from typing import Optional
 
 import pandas as pd
 
-from src.config.settings import DATA_RAW_UNZIP_PATH, DATA_PROCESSED_PATH
+from src.config.settings import DATA_RAW_UNZIP_PATH, DATA_PROCESSED_PATH, PROJECT_ROOT
 from src.utils.custom_exception import raise_from_exception, CustomException
 from src.utils.custom_logger import get_logger
 
@@ -58,16 +58,22 @@ class ProcessRaw:
 
                     files_found += 1
                     file_path = Path(root) / file
-                    logger.debug("Reading raw file: %s", file_path)
+                    # Render a path relative to project root for cleaner logs
+                    try:
+                        rel_path = str(file_path.relative_to(PROJECT_ROOT))
+                    except Exception:
+                        rel_path = str(file_path.name)
+
+                    logger.debug("Reading raw file: %s", rel_path)
 
                     try:
                         df_read = pd.read_csv(file_path, sep=sep, encoding="utf-8")
                     except UnicodeDecodeError:
                         # Fallback to latin1 if utf-8 fails
-                        logger.debug("utf-8 failed for %s; trying latin-1", file_path)
+                        logger.debug("utf-8 failed for %s; trying latin-1", rel_path)
                         df_read = pd.read_csv(file_path, sep=sep, encoding="latin-1")
 
-                    logger.info("Loaded %s rows from %s", len(df_read), file_path)
+                    logger.info("Loaded %s rows from %s", len(df_read), rel_path)
                     df_list.append(df_read)
 
             if files_found == 0:
@@ -165,12 +171,20 @@ class ProcessRaw:
                 # Try pyarrow then fastparquet
                 try:
                     df.to_parquet(out_path, index=False, compression="snappy")
-                    logger.info("Saved processed dataframe as parquet to %s (pyarrow)", out_path)
+                    try:
+                        out_rel = str(out_path.relative_to(PROJECT_ROOT))
+                    except Exception:
+                        out_rel = str(out_path.name)
+                    logger.info("Saved processed dataframe as parquet to %s (pyarrow)", out_rel)
                 except Exception as e1:
                     # Try fastparquet
                     try:
                         df.to_parquet(out_path, index=False, engine="fastparquet", compression="snappy")
-                        logger.info("Saved processed dataframe as parquet to %s (fastparquet)", out_path)
+                        try:
+                            out_rel = str(out_path.relative_to(PROJECT_ROOT))
+                        except Exception:
+                            out_rel = str(out_path.name)
+                        logger.info("Saved processed dataframe as parquet to %s (fastparquet)", out_rel)
                     except Exception as e2:
                         raise_from_exception("Failed to write parquet file; please install pyarrow or fastparquet", e2)
 
@@ -193,7 +207,11 @@ class ProcessRaw:
                 # Save small sample CSV into interim (better place for inspection artifacts)
                 sample_path = self.path_interim_path / f"{out_path.stem}_sample.csv"
                 df.head(sample_csv_lines).to_csv(sample_path, index=False, sep=sep, encoding="utf-8")
-                logger.info("Saved sample CSV (%d rows) to %s", sample_csv_lines, sample_path)
+                try:
+                    sample_rel = str(sample_path.relative_to(PROJECT_ROOT))
+                except Exception:
+                    sample_rel = str(sample_path.name)
+                logger.info("Saved sample CSV (%d rows) to %s", sample_csv_lines, sample_rel)
             else:
                 logger.debug("Skipping additional sample CSV because main file is CSV")
 
