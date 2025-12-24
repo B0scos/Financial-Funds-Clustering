@@ -146,10 +146,15 @@ class ProcessRaw:
             else:
                 raise CustomException(f"Unsupported save format: {fmt}")
 
-            # Always write a small CSV sample for quick checking in VSCode
-            sample_path = self.path_processed_path / f"{out_path.stem}_sample.csv"
-            df.head(sample_csv_lines).to_csv(sample_path, index=False, sep=sep, encoding="utf-8")
-            logger.info("Saved sample CSV (%d rows) to %s", sample_csv_lines, sample_path)
+            # Write at most one CSV:
+            # - If the main file is parquet, write a small sample CSV for quick inspection.
+            # - If the main file is CSV, do NOT write an additional sample to avoid duplicates.
+            if fmt == "parquet":
+                sample_path = self.path_processed_path / f"{out_path.stem}_sample.csv"
+                df.head(sample_csv_lines).to_csv(sample_path, index=False, sep=sep, encoding="utf-8")
+                logger.info("Saved sample CSV (%d rows) to %s", sample_csv_lines, sample_path)
+            else:
+                logger.debug("Skipping additional sample CSV because main file is CSV")
 
             return out_path
         except CustomException:
