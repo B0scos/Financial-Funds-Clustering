@@ -8,6 +8,8 @@ import pandas as pd
 from src.utils.custom_logger import get_logger
 from src.utils.custom_exception import CustomException
 
+# Import ProcessRaw so DataCleaner can optionally persist cleaned data
+from src.process.load_raw import ProcessRaw
 
 logger = get_logger(__name__)
 
@@ -58,13 +60,33 @@ class DataCleaner:
         self.logger = logger or get_logger(__name__)
 
     # ---------- Public API ----------
-    def run(self, df: pd.DataFrame) -> pd.DataFrame:
+    def run(
+        self,
+        df: pd.DataFrame,
+        save: bool = False,
+        filename: str = "cleaned.parquet",
+        fmt: str = "parquet",
+        allow_full_csv: bool = False,
+    ) -> pd.DataFrame:
         """Run the cleaning pipeline and return a cleaned DataFrame.
 
-        This orchestrates validation + cleaning steps. Each step logs its
-        start/end and returns the (possibly mutated) DataFrame. Because
-        the concrete logic is intentionally not implemented here, the
-        steps are no-ops by default.
+        Optional persistence
+        --------------------
+        If `save=True`, the cleaned DataFrame will be saved to
+        `data/processed` using the existing `ProcessRaw.save` helper.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            Dataframe to clean.
+        save : bool
+            If True, save the cleaned DataFrame to `data/processed`.
+        filename : str
+            Filename to write (defaults to `cleaned.parquet`).
+        fmt : str
+            Output format: 'parquet' or 'csv'.
+        allow_full_csv : bool
+            Only relevant for CSV writes; allow writing full CSV if True.
         """
         self.logger.debug("Starting DataCleaner.run()")
 
@@ -73,6 +95,22 @@ class DataCleaner:
         df = self._drop_empty_rows(df)
         df = self._deduplicate(df)
         df = self._flag_outliers(df)
+
+        # Optionally persist the cleaned dataframe into data/processed
+        if save:
+            self.logger.debug("Saving cleaned dataframe to processed: %s (fmt=%s)", filename, fmt)
+            try:
+                pr = ProcessRaw()
+                out_path = pr.save(df, filename=filename, fmt=fmt, allow_full_csv=allow_full_csv, target="processed")
+                try:
+                    rel = str(out_path.relative_to(pr.path_processed_path.parent))
+                except Exception:
+                    rel = str(out_path)
+                self.logger.info("Cleaned dataframe saved to %s", rel)
+            except Exception as exc:
+                # Wrap in CustomException to keep consistent behaviour
+                self.logger.error("Failed to save cleaned dataframe: %s", exc)
+                raise CustomException("Failed to save cleaned dataframe") from exc
 
         self.logger.debug("Finished DataCleaner.run()")
         return df
