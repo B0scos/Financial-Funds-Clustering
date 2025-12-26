@@ -61,7 +61,7 @@ class DataCleaner:
         # Use the provided logger or fall back to the module logger created by get_logger
         self.logger = logger or get_logger(__name__)
 
-    # ---------- Public API ----------
+    
     def run(
         self,
         df: pd.DataFrame,

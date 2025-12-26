@@ -18,9 +18,19 @@ class FeaturesCreation:
         # certifies that the df is sorted by date
         self.df = self.df.sort_values('report_date')
 
-        # creates a groupby cnpj
+        # creates a groupby cnpjs
         self.group_by_cnpj = self.df.groupby('fund_cnpj')
 
+
+
+    def run(self):
+        logger.debug("Starting FeaturesCreation.run()")
+
+        
+        self._add_return()
+        self._add_gross_by_net()
+
+        return self.df.reset_index(drop=True)
     
     def _add_return(self):
         logger.info("Creating 'return' feature")
