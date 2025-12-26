@@ -14,6 +14,11 @@ DATA_TEST_PATH = PROJECT_ROOT.parent / "data" / "splitted" / "test.parquet"
 DATA_VALIDATION_PATH = PROJECT_ROOT.parent / "data" / "splitted" / "validation.parquet"
 
 
-## data spliting options
+## data spliting settings
 data_split_cutoff = '2025-06-01'
 train_test_split_ratio = 0.2
+
+## cleaning option
+
+# funds with less than this number will be removed
+thresh_hold_num_shareholds = 15

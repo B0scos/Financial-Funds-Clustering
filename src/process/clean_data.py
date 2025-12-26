@@ -10,7 +10,7 @@ from src.utils.custom_exception import CustomException
 
 # Import ProcessRaw so DataCleaner can optionally persist cleaned data
 from src.process.load_raw import ProcessRaw
-from src.config.settings import data_split_cutoff
+from src.config.settings import data_split_cutoff, thresh_hold_num_shareholds
 
 
 logger = get_logger(__name__)
@@ -164,7 +164,7 @@ class DataCleaner:
     
     def _filter_min_shareholders_pre_cutoff(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Remove a fund (CNPJ) entirely if it ever had <= 15 shareholders
+        Remove a fund (CNPJ) entirely if it ever had <= thresh_hold_num_shareholds shareholders
         on any date older than data_split_cutoff.
         """
         try:
@@ -178,7 +178,7 @@ class DataCleaner:
             bad_cnpjs = (
                 df.loc[
                     (df["report_date"] < cutoff) &
-                    (df["num_shareholders"] <= 15),
+                    (df["num_shareholders"] <= thresh_hold_num_shareholds),
                     "fund_cnpj"
                 ]
                 .unique()
@@ -187,7 +187,7 @@ class DataCleaner:
             filtered = df[~df["fund_cnpj"].isin(bad_cnpjs)]
 
             self.logger.info(
-                "Removed %d funds for having <= 15 shareholders before cutoff %s",
+                "Removed %d funds for having <= thresh_hold_num_shareholds shareholders before cutoff %s",
                 len(bad_cnpjs),
                 cutoff,
             )
