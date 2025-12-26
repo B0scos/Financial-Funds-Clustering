@@ -9,9 +9,9 @@ DATA_RAW_ZIP_PATH = PROJECT_ROOT.parent / "data" / "raw_zip"
 DATA_RAW_UNZIP_PATH = PROJECT_ROOT.parent / "data" / "raw_unzip"
 DATA_PROCESSED_PATH = PROJECT_ROOT.parent / "data" / "processed"
 DATA_INTERIM_PATH = PROJECT_ROOT.parent / "data" / "interim"
-DATA_TRAIN_PATH = PROJECT_ROOT.parent / "data" / "splited" / "train.parquet"
-DATA_TEST_PATH = PROJECT_ROOT.parent / "data" / "splited" / "test.parquet"
-DATA_VALIDATION_PATH = PROJECT_ROOT.parent / "data" / "splited" / "validation.parquet"
+DATA_TRAIN_PATH = PROJECT_ROOT.parent / "data" / "splitted" / "train.parquet"
+DATA_TEST_PATH = PROJECT_ROOT.parent / "data" / "splitted" / "test.parquet"
+DATA_VALIDATION_PATH = PROJECT_ROOT.parent / "data" / "splitted" / "validation.parquet"
 
 
 ## data spliting options
