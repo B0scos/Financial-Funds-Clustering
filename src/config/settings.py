@@ -10,3 +10,7 @@ DATA_RAW_UNZIP_PATH = PROJECT_ROOT.parent / "data" / "raw_unzip"
 DATA_PROCESSED_PATH = PROJECT_ROOT.parent / "data" / "processed"
 DATA_INTERIM_PATH = PROJECT_ROOT.parent / "data" / "interim"
 
+
+## data spliting options
+data_split_cutoff = '2025-06-01'
+train_test_split_ratio = 0.2
