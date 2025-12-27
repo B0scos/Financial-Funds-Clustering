@@ -29,15 +29,16 @@ class FeaturesCreation:
     def run(self) -> pd.DataFrame:
         logger.debug("Starting FeaturesCreation.run()")
 
-        self._add_return()
+        self._add_return('quota_value')
         self._add_gross_by_net()
         self._add_vol_std([5, 10, 15, 22, 50], "return")
+        self._add_drawdown('quota_value')
 
         return self.df.reset_index(drop=True)
 
-    def _add_return(self) -> pd.DataFrame:
+    def _add_return(self, col) -> pd.DataFrame:
         logger.info("Creating 'return' feature")
-        self.df["return"] = self.group_by_cnpj["quota_value"].pct_change()
+        self.df["return"] = self.group_by_cnpj[col].pct_change()
         return self.df
 
     def _add_gross_by_net(self) -> pd.DataFrame:
@@ -50,3 +51,10 @@ class FeaturesCreation:
         for win in list_windows:
             self.df[f"vol_{win}"] = self.df[col].rolling(win).std()
         return self.df
+
+    def _add_drawdown(self, col: str) -> pd.DataFrame:
+        logger.info("Creating 'drawdown' features")
+        cummax = self.group_by_cnpj[col].cummax()
+        self.df['drawdown'] = (self.df[col] / cummax) - 1
+        return self.df
+    

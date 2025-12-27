@@ -51,15 +51,15 @@ class ProcessRaw:
             df_list = []
             provenance = []
             files_found = 0
+
             for root, _dirs, files in os.walk(self.path_raw_data):
                 for file in files:
-                    # Only attempt to read CSV-like files
                     if not file.lower().endswith(".csv"):
                         continue
 
                     files_found += 1
                     file_path = Path(root) / file
-                    # Render a path relative to project root for cleaner logs
+
                     try:
                         rel_path = str(file_path.relative_to(PROJECT_ROOT))
                     except Exception:
@@ -70,13 +70,11 @@ class ProcessRaw:
                     try:
                         df_read = pd.read_csv(file_path, sep=sep, encoding="utf-8")
                     except UnicodeDecodeError:
-                        # Fallback to latin1 if utf-8 fails
                         logger.debug("utf-8 failed for %s; trying latin-1", rel_path)
                         df_read = pd.read_csv(file_path, sep=sep, encoding="latin-1")
 
-                    # Track provenance separately (do NOT add a 'source_file' column to the dataframe)
                     provenance.append((rel_path, df_read.copy()))
-                df_list.append(df_read)
+                    df_list.append(df_read)
 
             if files_found == 0:
                 raise CustomException(f"No CSV files found in {self.path_raw_data}")
