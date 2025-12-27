@@ -30,7 +30,7 @@ class FeaturesCreation:
 
         self._add_return('quota_value')
         self._add_gross_by_net()
-        self._add_vol_std([5, 10, 15, 22, 50], "return")
+        self._add_vol_std([5, 10, 15], "return")
         self._add_drawdown('quota_value')
 
         return self.df.reset_index(drop=True)
@@ -65,15 +65,32 @@ class FeaturesCreation:
         logger.info("Starting FeaturesCreation.aggregate()")
 
         agg_features = self.df.groupby("fund_cnpj").agg(
+            
+            ## features based on retuns
             mean_return=("return", "mean"),
             std_return=("return", "std"),
+
+            ## features based on drawdown
             max_drawdown=("drawdown", "min"),
             avg_drawdown=("drawdown", "mean"),
+
+            ## features based on funds
             avg_gross_by_net=("gross_by_net", "mean"),
             avg_inflow=("daily_inflow", "mean"),
             avg_redemption=("daily_redemptions", "mean"),
             avg_shareholders=("num_shareholders", "mean"),
+
+            ## features based on SD
+            mean_std_5=('vol_5', 'mean'),
+            mean_std_10=('vol_10', 'mean'),
+            mean_std_15=('vol_15', 'mean'),
+            std_std_5=('vol_5', 'std'),
+            std_std_10=('vol_10', 'std'),
+            std_std_15=('vol_15', 'std'),
         )
+
+        agg_features['sharpe'] = agg_features['mean_return'] / agg_features['std_return']
+        agg_features['ret_by_DD'] = agg_features['mean_return'] / agg_features['avg_drawdown']
 
 
         # handle NaNs and infinities from funds with insufficient history
@@ -109,5 +126,7 @@ class FeaturesCreation:
             .transform("cummax")
         )
 
-        self.df["drawdown"] = (self.df[col] / peak) - 1
+        self.df["drawdown"] = (peak / self.df[col]) - 1
         return self.df
+
+    

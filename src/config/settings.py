@@ -24,8 +24,9 @@ DATA_TRAIN_PATH_WITH_FEATURES = PROJECT_ROOT.parent / "data" / "splitted_feature
 DATA_TEST_PATH_WITH_FEATURES = PROJECT_ROOT.parent / "data" / "splitted_features" / "test.parquet"
 DATA_VALIDATION_PATH_WITH_FEATURES = PROJECT_ROOT.parent / "data" / "splitted_features" / "validation.parquet"
 
-## data spliting settings
-data_split_cutoff = '2025-06-01'
+## data spliting settings data_split_cutoff needs to be greater than train_test_cutoff
+data_split_cutoff = '2025-06-01 '
+train_test_cutoff = '2024-01-01'
 train_test_split_ratio = 0.2
 
 ## cleaning option

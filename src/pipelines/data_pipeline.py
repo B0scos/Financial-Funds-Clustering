@@ -1,7 +1,7 @@
 from src.process.load_raw import ProcessRaw
 from src.process.clean_data import DataCleaner, DataCleanerConfig
 from src.utils.utils import data_spliter, save_dataframe_parquet
-from src.config.settings import train_test_split_ratio, data_split_cutoff
+from src.config.settings import train_test_split_ratio, data_split_cutoff, train_test_cutoff
 from src.utils.custom_exception import CustomException
 from src.utils.custom_logger import get_logger
 from src.config.settings import DATA_TRAIN_PATH, DATA_TEST_PATH, DATA_VALIDATION_PATH
@@ -35,7 +35,11 @@ def data_pipeline(skip_concat = False):
 
 
         # splitting the data
-        train_df, test_df, val_df = data_spliter(cleaned, data_split_cutoff, train_test_split_ratio)
+        train_df, test_df, val_df = data_spliter(df=cleaned,
+                                                val_cutoff=data_split_cutoff,
+                                                train_test_cutoff=train_test_cutoff,
+                                                test_ratio=train_test_split_ratio
+                                            )
 
         # saving the data
         save_dataframe_parquet(train_df, DATA_TRAIN_PATH)

@@ -13,6 +13,7 @@ logger = get_logger(__name__)
 def data_spliter(
     df: pd.DataFrame,
     val_cutoff: str,
+    train_test_cutoff : str = "",
     test_ratio: float = 0.2,
     date_col: str = "report_date",
     random_state: int = 42,
@@ -56,22 +57,26 @@ def data_spliter(
         if date_col not in df.columns:
             raise CustomException(f"Column '{date_col}' does not exist in dataframe.")
 
-
-        # validation = >= cutoff
         val_df = df[df[date_col] >= val_cutoff]
+        if not train_test_cutoff:
+            # validation = >= cutoff
+            
 
-        # train/test = < cutoff
-        train_test_df = df[df[date_col] < val_cutoff]
+            # train/test = < cutoff
+            train_test_df = df[df[date_col] < val_cutoff]
 
-        if len(train_test_df) == 0:
-            raise CustomException("No data available for train/test before cutoff.")
+            if len(train_test_df) == 0:
+                raise CustomException("No data available for train/test before cutoff.")
 
-        train_df, test_df = train_test_split(
-            train_test_df,
-            test_size=test_ratio,
-            random_state=random_state,
-            shuffle=True,  # safe; temporal separation already enforced
-        )
+            train_df, test_df = train_test_split(
+                train_test_df,
+                test_size=test_ratio,
+                random_state=random_state,
+                shuffle=True,  # safe; temporal separation already enforced
+            )
+        else:
+            train_df = df[df[date_col] <= train_test_cutoff]
+            test_df = df[((df[date_col] > train_test_cutoff) & (df[date_col] <= val_cutoff))]
 
         logger.info(
             f"Split complete | train={len(train_df)} | test={len(test_df)} | val={len(val_df)}"
