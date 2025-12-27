@@ -24,7 +24,6 @@ class FeaturesCreation:
 
     def __init__(self, df: pd.DataFrame) -> None:
         self.df = df.sort_values("report_date")
-        self.group_by_cnpj = self.df.groupby("fund_cnpj")
 
     def run(self) -> pd.DataFrame:
         logger.debug("Starting FeaturesCreation.run()")
@@ -36,9 +35,12 @@ class FeaturesCreation:
 
         return self.df.reset_index(drop=True)
 
-    def _add_return(self, col) -> pd.DataFrame:
+    def _add_return(self, col: str) -> pd.DataFrame:
         logger.info("Creating 'return' feature")
-        self.df["return"] = self.group_by_cnpj[col].pct_change()
+        self.df["return"] = (
+            self.df.groupby("fund_cnpj")[col]
+            .pct_change()
+        )
         return self.df
 
     def _add_gross_by_net(self) -> pd.DataFrame:
@@ -53,8 +55,11 @@ class FeaturesCreation:
         return self.df
 
     def _add_drawdown(self, col: str) -> pd.DataFrame:
-        logger.info("Creating 'drawdown' features")
-        cummax = self.group_by_cnpj[col].cummax()
-        self.df['drawdown'] = (self.df[col] / cummax) - 1
+        logger.info("Creating 'drawdown' feature")
+        peak = (
+            self.df.groupby("fund_cnpj")[col]
+            .transform("cummax")
+        )
+
+        self.df["drawdown"] = (self.df[col] / peak) - 1
         return self.df
-    
