@@ -108,7 +108,7 @@ class FeaturesCreation:
             kurt_return=("return", pd.Series.kurt),
         
             ## features based on drawdown
-            max_drawdown=("drawdown", "min"),
+            max_drawdown=("drawdown", "max"),
             avg_drawdown=("drawdown", "mean"),
             avg_time_drawdown=('time_in_drawdown', 'mean'),
             max_time_drawdown=('time_in_drawdown', 'max'),
