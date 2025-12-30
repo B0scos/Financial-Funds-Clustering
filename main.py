@@ -22,48 +22,51 @@ import pandas as pd
 
 if __name__ == "__main__":
 
-    train_pca, test_pca, val_pca = pre_processing(n_components=4)
+    data_pipeline(rebuild_interim=True)
+    # quit()
 
-    model = KMeans(n_clusters=3, random_state=0, n_init="auto")
+    # train_pca, test_pca, val_pca = pre_processing(n_components=4)
 
-    # backward selection → returns remaining features
-    # remaining, history = backward_feature_selection(train_pca, test_pca, model, min_features=10)
+    # model = KMeans(n_clusters=5, random_state=0, n_init="auto")
 
-    # print("Remaining features:", remaining)
-    # print("History:", history)
+    # # backward selection → returns remaining features
+    # # remaining, history = backward_feature_selection(train_pca, test_pca, model, min_features=10)
 
-    # --- Ensure we only use the selected features ---
-    X_train = train_pca #[remaining]
-    X_test  = test_pca #[remaining]
-    X_val   = val_pca #[remaining]
+    # # print("Remaining features:", remaining)
+    # # print("History:", history)
 
-    # --- Fit and predict ---
-    model.fit(X_train)
+    # # --- Ensure we only use the selected features ---
+    # X_train = train_pca #[remaining]
+    # X_test  = test_pca #[remaining]
+    # X_val   = val_pca #[remaining]
 
-    train_clusters = model.predict(X_train)
-    test_clusters  = model.predict(X_test)
-    val_clusters   = model.predict(X_val)
+    # # --- Fit and predict ---
+    # model.fit(X_train)
 
-    # --- Merge back ---
-    train_pca["cluster"] = train_clusters
-    test_pca["cluster"]  = test_clusters
-    val_pca["cluster"]   = val_clusters
+    # train_clusters = model.predict(X_train)
+    # test_clusters  = model.predict(X_test)
+    # val_clusters   = model.predict(X_val)
 
-    # --- Groupby summaries ---
-    def summarize(df, name):
-        print(f"\n==== {name} GROUPBY SUMMARY ====")
+    # # --- Merge back ---
+    # train_pca["cluster"] = train_clusters
+    # test_pca["cluster"]  = test_clusters
+    # val_pca["cluster"]   = val_clusters
 
-        grouped = df.groupby("cluster").mean(numeric_only=True)
+    # # --- Groupby summaries ---
+    # def summarize(df, name):
+    #     print(f"\n==== {name} GROUPBY SUMMARY ====")
 
-        # If you ONLY want these columns and they actually exist:
-        cols = ['sharpe','avg_drawdown', 'avg_time_drawdown', 'max_time_drawdown']
-        available = [c for c in cols if c in grouped.columns]
+    #     grouped = df.groupby("cluster").mean(numeric_only=True)
 
-        print(grouped[available])
+    #     # If you ONLY want these columns and they actually exist:
+    #     cols = ['mean_return','std_return',  'ret_by_DD']
+    #     available = [c for c in cols if c in grouped.columns]
 
-        print("\nCounts per cluster:")
-        print(df["cluster"].value_counts())
+    #     print(grouped[available])
 
-    summarize(train_pca, "TRAIN")
-    summarize(test_pca, "TEST")
-    summarize(val_pca, "VAL")
+    #     print("\nCounts per cluster:")
+    #     print(df["cluster"].value_counts())
+
+    # summarize(train_pca, "TRAIN")
+    # summarize(test_pca, "TEST")
+    # summarize(val_pca, "VAL")

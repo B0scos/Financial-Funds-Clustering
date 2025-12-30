@@ -160,6 +160,23 @@ class ProcessRaw:
 
             # Final processing on concatenated dataframe
             df = self._final_processing(df)
+
+
+            original_rows = len(df)
+            df_sorted = df.sort_values('num_shareholders', ascending=False)
+            idx = df_sorted.groupby(['fund_cnpj', 'report_date'])['num_shareholders'].idxmax()
+            df = df.loc[idx].reset_index(drop=True)
+            removed = original_rows - len(df)
+            logger.info(f"Removed {removed} duplicate rows, keeping max num_shareholders")
+
+
+            df['month'] = df['report_date'].dt.strftime('%m-%Y')
+
+            # Count per fund per month
+            df['appearances_per_month'] = df.groupby(['fund_cnpj', 'month'])['fund_cnpj'].transform('count')
+
+            # Find the maximum monthly appearances for each fund (across all months)
+            df['max_monthly_appearances'] = df.groupby('month')['appearances_per_month'].transform('max')
             
             # Validate and check for missing CNPJ
             self._validate_and_report(df, provenance)
