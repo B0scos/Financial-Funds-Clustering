@@ -99,7 +99,8 @@ class DataCleaner:
         df = self._filter_min_shareholders_pre_cutoff(df)
         df = self._filter_by_max_date_gap(df, max_gap=6)
         df = self._flag_outliers(df)
-        df = self._filter_by_gap_violations(df)
+        # df = self._filter_by_gap_violations(df)
+        df = self._clean_outstanding(df)
 
         # Optionally persist the cleaned dataframe into data/processed
         if save:
@@ -277,56 +278,36 @@ class DataCleaner:
             self.logger.error("Failed to filter by date gap: %s", exc)
         raise CustomException("Error filtering funds by date gap") from exc
     
-    def _filter_by_gap_violations(
-        self,
-        df: pd.DataFrame,
-        min_days: int = 3,
-        max_allowed_violations: int = 11,
-    ) -> pd.DataFrame:
-        """
-        Remove funds where the number of gaps greater than `min_days`
-        is >= (max_allowed_violations + 1).
-        
-        Example: if you want to drop funds with 12+ gaps > 3 days:
-            min_days = 3
-            max_allowed_violations = 11
-        """
-        try:
-            required = {"fund_cnpj", "report_date"}
-            if not required.issubset(df.columns):
-                return df
+    def _clean_outstanding(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
 
-            df = df.copy()
-            df["report_date"] = pd.to_datetime(df["report_date"])
-            df = df.sort_values(["fund_cnpj", "report_date"])
+        # compute returns per fund
+        df['return'] = (
+            df.groupby('fund_cnpj')['quota_value']
+            .transform(lambda s: s.pct_change())
+        )
 
-            # Compute diffs
-            df["gap_days"] = df.groupby("fund_cnpj")["report_date"].diff().dt.days
+        # drop NaNs before quantile calc
+        ret = df['return'].dropna()
 
-            # Count violations per fund
-            violations = (
-                df.groupby("fund_cnpj")["gap_days"]
-                .apply(lambda s: (s > min_days).sum())
-            )
+        if ret.empty:
+            return df.drop(columns=['return'])
 
-            # Funds to discard
-            bad_funds = violations[violations >= (max_allowed_violations + 1)].index
+        upper = ret.quantile(0.99999)
+        lower = ret.quantile(0.00001)
 
-            filtered = df[~df["fund_cnpj"].isin(bad_funds)].drop(columns=["gap_days"])
+        # funds with insane movements
+        bad_funds = (
+            df[(df['return'] > upper) | (df['return'] < lower)]
+            ['fund_cnpj']
+            .unique()
+        )
 
-            self.logger.info(
-                "Removed %d funds with >= %d gaps > %d days",
-                len(bad_funds),
-                max_allowed_violations + 1,
-                min_days,
-            )
+        # remove them
+        df = df[~df['fund_cnpj'].isin(bad_funds)].drop(columns=['return'])
 
-            return filtered
-
-        except Exception as exc:
-            self.logger.error("Failed gap violation filter: %s", exc)
-            raise CustomException("Error filtering funds by date gap violations") from exc
-            
+        return df
+    
     # ---------- Utilities ----------
     @staticmethod
     def summary(df: pd.DataFrame) -> Dict[str, Any]:
