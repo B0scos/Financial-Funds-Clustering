@@ -1,11 +1,9 @@
-from src.pipelines.data_pipeline import data_pipeline
 from src.config.settings import (
 DATA_TRAIN_PATH_WITH_FEATURES,
 DATA_TEST_PATH_WITH_FEATURES,
 DATA_VALIDATION_PATH_WITH_FEATURES)
 import pandas as pd
-from src.pipelines.train_pipeline import pre_processing
-from src.pipelines.feature_selection_pipeline import backward_feature_selection
+from src.process.pre_processing import pre_processing
 from sklearn.cluster import KMeans
 
 

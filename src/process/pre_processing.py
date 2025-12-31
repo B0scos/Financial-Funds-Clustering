@@ -1,13 +1,5 @@
-from src.config.settings import DATA_TRAIN_PATH_WITH_FEATURES, DATA_TEST_PATH_WITH_FEATURES, DATA_VALIDATION_PATH_WITH_FEATURES
 import pandas as pd
 from src.models.model import PCAWrapper, RobustScalerWrapper
-
-def evaluate(df, look_features):
-    return (
-        df.groupby("pred")[look_features].mean(),
-        df["pred"].value_counts()
-    )
-
 
 def pre_processing(n_components : int, df_train : pd.DataFrame, df_test : pd.DataFrame, df_val : pd.DataFrame):
     """
@@ -64,26 +56,3 @@ def pre_processing(n_components : int, df_train : pd.DataFrame, df_test : pd.Dat
     train_scaled, test_scaled, val_scaled = scaler.fit_transform()
 
     return train_scaled, test_scaled, val_scaled
-
-def run_training(model_cls,
-                df_train : pd.DataFrame,
-                df_test : pd.DataFrame,
-                df_val : pd.DataFrame, 
-                pre_processing = False, 
-                n_components=5):
-
-    if pre_processing:
-        train, test, val = pre_processing(n_components, df_train, df_test, df_val)
-
-    model = model_cls()
-    train_pred, test_pred, val_pred = model.train_and_predict(
-        train, test, val
-    )
-
-    df_train["pred"] = train_pred
-    df_test["pred"] = test_pred
-    df_val["pred"] = val_pred
-
-    return df_train, df_test, df_val
-
-
