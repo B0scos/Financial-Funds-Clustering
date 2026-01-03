@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
     df_train, df_test, df_val = load_data_with_features()
 
-    models = [KMeansTrainer]
+    models = [KMeansTrainer, GMMTrainer]
 
     clusters = [2]
 
