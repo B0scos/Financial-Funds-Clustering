@@ -24,7 +24,7 @@ By incorporating the **Wasserstein distance** as a stability score, this project
     - **Performance:** Measured using the Silhouette Score to evaluate cluster density and separation.
     - **Stability:** Measured using the Wasserstein Distance to quantify the statistical similarity of cluster characteristics across train, test, and validation sets.
 - **Structured Logging:** All experiment parameters and results are automatically saved to CSV files for comprehensive analysis.
-- **Automated Analysis:** An analysis script (`a.py`) processes the results to identify the best-performing model and the most stable model, highlighting the trade-offs between the two.
+- **Automated Analysis:** An analysis script (`summary.py`) processes the results to identify the best-performing model and the most stable model, highlighting the trade-offs between the two.
 
 ### Project Structure
 
@@ -34,7 +34,7 @@ By incorporating the **Wasserstein distance** as a stability score, this project
     - `process`: Data preprocessing functions.
     - `utils`: Utility functions, including data loading.
 - **/main.py**: The main script to execute the complete experiment pipeline.
-- **/a.py**: The analysis script to interpret experiment results.
+- **/summary.py**: The analysis script to interpret experiment results.
 - **/experiment_results.csv**: Output file containing detailed, per-cluster metrics from all runs.
 
 ### Setup and Installation
@@ -74,7 +74,7 @@ By incorporating the **Wasserstein distance** as a stability score, this project
 2.  **Analyze the Results:**
     Run the analysis script to identify the best-performing and most stable models.
     ```bash
-    python a.py
+    python summary.py
     ```
 
 ---
@@ -99,7 +99,7 @@ Ao incorporar a **distância de Wasserstein** como uma pontuação de estabilida
     - **Desempenho:** Medido usando o Silhouette Score para avaliar a densidade e separação dos clusters.
     - **Estabilidade:** Medida usando a Distância de Wasserstein para quantificar a similaridade estatística das características dos clusters entre os conjuntos de treino, teste e validação.
 - **Registro Estruturado:** Todos os parâmetros e resultados dos experimentos são salvos automaticamente em arquivos CSV para uma análise abrangente.
-- **Análise Automatizada:** Um script de análise (`a.py`) processa os resultados para identificar o modelo de melhor desempenho e o modelo mais estável, destacando o equilíbrio entre os dois.
+- **Análise Automatizada:** Um script de análise (`summary.py`) processa os resultados para identificar o modelo de melhor desempenho e o modelo mais estável, destacando o equilíbrio entre os dois.
 
 ### Estrutura do Projeto
 
@@ -109,7 +109,7 @@ Ao incorporar a **distância de Wasserstein** como uma pontuação de estabilida
     - `process`: Funções de pré-processamento de dados.
     - `utils`: Funções utilitárias, incluindo o carregamento de dados.
 - **/main.py**: O script principal para executar o pipeline completo de experimentos.
-- **/a.py**: O script de análise para interpretar os resultados dos experimentos.
+- **/summary.py**: O script de análise para interpretar os resultados dos experimentos.
 - **/experiment_results.csv**: Arquivo de saída contendo métricas detalhadas por cluster de todas as execuções.
 
 ### Configuração e Instalação
@@ -149,7 +149,7 @@ Ao incorporar a **distância de Wasserstein** como uma pontuação de estabilida
 2.  **Analise os Resultados:**
     Execute o script de análise para identificar os modelos com melhor desempenho e maior estabilidade.
     ```bash
-    python a.py
+    python summary.py
     ```
 
 ##  Features
